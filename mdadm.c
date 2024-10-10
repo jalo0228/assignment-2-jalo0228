@@ -63,37 +63,41 @@ int mdadm_read(uint32_t start_addr, uint32_t read_len, uint8_t *read_buf){
     return -3;
   }
   //additional restriction;
-  if (read_buf == NULL && read_len != 0 ) {
+  if (read_buf == NULL && read_len > 0 ) {
     return -4;
   }
   //while currnet_ad > block_size, //seek_to_block -> seek_to_block -> find the offset -> read_block
   //after reading a block read_len - block_size
   uint32_t current_addr = start_addr;
   uint32_t end_address = start_addr + read_len;
+  uint8_t temp[JBOD_BLOCK_SIZE];
   while (current_addr < end_address){
     uint32_t DiskID = current_addr / JBOD_DISK_SIZE;
     uint32_t BlockID = (current_addr % JBOD_DISK_SIZE) / JBOD_BLOCK_SIZE;
 
     //seek to disk
-    uint32_t bit= operator(DiskID,0,JBOD_SEEK_TO_DISK); //seek to disk
-    if(jbod_operation(bit,NULL) == -1){
+    uint32_t checkdisk= operator(DiskID,0,JBOD_SEEK_TO_DISK); //seek to disk
+    if(jbod_operation(checkdisk,NULL) == -1){
       return -4;
     }
+
     //seek to block
-    uint32_t bit2= operator(0,BlockID,JBOD_SEEK_TO_BLOCK);
-    if(jbod_operation(bit2,NULL) == -1){
+    uint32_t checkblock= operator(0,BlockID,JBOD_SEEK_TO_BLOCK);
+    if(jbod_operation(checkblock,NULL) == -1){
       return -4;
     }
+
     //read block
-    uint8_t temp[JBOD_BLOCK_SIZE];
-    uint32_t bit3 = operator(0,0,JBOD_READ_BLOCK);
-    if(jbod_operation(bit3,temp)){
+    
+    uint32_t readblock = operator(0,0,JBOD_READ_BLOCK);
+    if(jbod_operation(readblock,temp)== -1){
       return -4;  
     }
+
     //when offset exists. offset : when current_addr is not the beginning of the block
-    uint32_t offset = (current_addr) % JBOD_BLOCK_SIZE;
-    uint32_t remaining_len = end_address - current_addr;
-    uint32_t bytes_to_read;
+    int offset = (current_addr) % JBOD_BLOCK_SIZE;
+    int remaining_len = end_address - current_addr;
+    int bytes_to_read;
     //calculte bytes to read from block
     if(remaining_len < (JBOD_BLOCK_SIZE - offset)){
       bytes_to_read = remaining_len;
@@ -102,12 +106,10 @@ int mdadm_read(uint32_t start_addr, uint32_t read_len, uint8_t *read_buf){
       bytes_to_read = JBOD_BLOCK_SIZE - offset;
     }
 
-    //copy the data into buf
-    memcpy(read_buf + (current_addr - start_addr),temp+offset , bytes_to_read);
+    //copy the calculted bytes into read_buf
+    memcpy(read_buf + (current_addr - start_addr), temp+offset , bytes_to_read);
 
     current_addr += bytes_to_read;
   }
   return read_len;
 }
-
-//test to git push
