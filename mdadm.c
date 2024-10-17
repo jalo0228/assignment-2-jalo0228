@@ -68,6 +68,9 @@ int mdadm_read(uint32_t start_addr, uint32_t read_len, uint8_t *read_buf){
   }
   //while currnet_ad > block_size, //seek_to_block -> seek_to_block -> find the offset -> read_block
   //after reading a block read_len - block_size
+  //start fromt the start_addr
+  //end_address = reading bytes from start addr
+  //define temporary blocksize
   uint32_t current_addr = start_addr;
   uint32_t end_address = start_addr + read_len;
   uint8_t temp[JBOD_BLOCK_SIZE];
@@ -94,7 +97,7 @@ int mdadm_read(uint32_t start_addr, uint32_t read_len, uint8_t *read_buf){
       return -4;  
     }
 
-    //when offset exists. offset : when current_addr is not the beginning of the block
+    //when offset exists. offset : current_addr is not the beginning of the block
     int offset = (current_addr) % JBOD_BLOCK_SIZE;
     int remaining_len = end_address - current_addr;
     int bytes_to_read;
